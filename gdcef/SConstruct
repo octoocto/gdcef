@@ -166,6 +166,9 @@ if platform == 'linux' or platform == 'osx':
                              '-Werror=implicit-function-declaration',
                              '-Wtautological-compare'])
 
+if platform == 'osx':
+    env.Append(CXXFLAGS=['-fobjc-arc'])
+
 # Pathes of Godot header files
 env.Append(CPPPATH=['.',
                     godot_api_path + '/godot-headers',

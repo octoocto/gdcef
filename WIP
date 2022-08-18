@@ -1,0 +1,1 @@
+After Godot have exported the .dmg, copy the build/Frameworks inside the .app but I have a segfault so I dunno how to deal with it

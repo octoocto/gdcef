@@ -116,12 +116,14 @@ void GDCef::_init()
                         << folder);
     }
 
+#if !defined(__APPLE__)
     // Check if needed files to make CEF working are present.
     if (!sanity_checks(folder))
     {
         GDCEF_ERROR("Aborting because of missing necessary files");
         exit(1);
     }
+#endif
 
     // Since we cannot configure CEF from the command line main(argc, argv)
     // because we cannot access to it, we have to configure CEF directly.
@@ -163,11 +165,13 @@ static void configureCEF(fs::path const& folder, CefSettings& cef_settings,
     // the comments on CefExecuteProcess() for details. If this value is
     // non-empty then it must be an absolute path. Also configurable using the
     // "browser-subprocess-path" command-line switch.
+#if !defined(__APPLE__)
     fs::path sub_process_path = { folder / SUBPROCESS_NAME };
     std::cout << "[GDCEF][GDCef::configureCEF] Setting SubProcess path: "
               << sub_process_path.string() << std::endl;
     CefString(&cef_settings.browser_subprocess_path)
             .FromString(sub_process_path.string());
+#endif
 
     // The location where data for the global browser cache will be stored on
     // disk. If this value is non-empty then it must be an absolute path that is
@@ -208,8 +212,10 @@ static void configureCEF(fs::path const& folder, CefSettings& cef_settings,
     // MacOS a "~/Library/Logs/<app name>_debug.log" file will be written where
     // <app name> is the name of the main app executable. Also configurable
     // using the "log-file" command-line switch.
+#if !defined(__APPLE__)
     CefString(&cef_settings.log_file).FromString((folder / "debug.log").string());
     cef_settings.log_severity = LOGSEVERITY_WARNING; // LOGSEVERITY_DEBUG;
+#endif
 
     // Set to true (1) to enable windowless (off-screen) rendering support. Do
     // not enable this value if the application does not use windowless
@@ -410,7 +416,7 @@ void GDCef::Impl::OnBeforeClose(CefRefPtr<CefBrowser> browser)
     while (i--)
     {
         godot::Node* node = m_owner.get_child(i);
-        GDBrowserView* b = reinterpret_cast<GDBrowserView*>(node);
+        GDBrowserView* b = static_cast<GDBrowserView*>(node);
         if ((b != nullptr) && (b->id() == browser->GetIdentifier()))
         {
             GDCEF_DEBUG_VAL("Removed " << b->id());

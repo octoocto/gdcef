@@ -86,6 +86,13 @@ def symlink(src, dst, force=False):
     os.symlink(src, dst)
 
 ###############################################################################
+### Equivalent to cp -r
+def copyfolder(src, dst):
+    print("Copy folder " + src + " ==> " + dst)
+    rmdir(dst)
+    shutil.copytree(src, dst)
+
+###############################################################################
 ### Equivalent to cp --verbose
 def copyfile(file_name, folder):
     dest = os.path.join(folder, os.path.basename(file_name))
@@ -291,15 +298,15 @@ def install_cef_assets():
 
     ### Get all CEF compiled artifacts needed for your application
     info("Installing Chromium Embedded Framework to " + build_path + " ...")
-    locales = os.path.join(build_path, "locales")
-    mkdir(locales)
-    if OSTYPE == "Linux" or OSTYPE == "Darwin":
+    if OSTYPE == "Linux":
         # cp THIRDPARTY_CEF_PATH/build/tests/cefsimple/*.pak *.dat *.so locales/* build_path
         S = os.path.join(THIRDPARTY_CEF_PATH, "build", "tests", "cefsimple", CEF_TARGET)
         copyfile(os.path.join(S, "v8_context_snapshot.bin"), build_path)
         copyfile(os.path.join(S, "icudtl.dat"), build_path)
         for f in glob.glob(os.path.join(S, "*.pak")):
             copyfile(f, build_path)
+        locales = os.path.join(build_path, "locales")
+        mkdir(locales)
         for f in glob.glob(os.path.join(S, "locales/*")):
             copyfile(f, locales)
         for f in glob.glob(os.path.join(S, "*.so")):
@@ -317,18 +324,20 @@ def install_cef_assets():
         copyfile(os.path.join(S, "icudtl.dat"), build_path)
         for f in glob.glob(os.path.join(S, "*.pak")):
             copyfile(f, build_path)
+        locales = os.path.join(build_path, "locales")
+        mkdir(locales)
         for f in glob.glob(os.path.join(S, "locales/*")):
             copyfile(f, locales)
     elif OSTYPE == "Darwin":
-        # For Mac OS X rename cef_sandbox.a to libcef_sandbox.a since Scons search
-        # library names starting by lib*
+        # For Mac OS X rename cef_sandbox.a to libcef_sandbox.a since Scons
+        # search library names starting by lib*
         os.chdir(os.path.join(THIRDPARTY_CEF_PATH, CEF_TARGET))
         shutil.copyfile("cef_sandbox.a", "libcef_sandbox.a")
-        S = os.path.join(THIRDPARTY_CEF_PATH, CEF_TARGET, "Chromium Embedded Framework.framework")
-        for f in glob.glob(S + "/Libraries*.dylib"):
-            copyfile(f, build_path)
-        for f in glob.glob(S + "/Resources/*"):
-            copyfile(f, build_path)
+        # Copy the CEFsimple frameworks and resources
+        copyfolder(os.path.join(THIRDPARTY_CEF_PATH,
+                                "build/tests/cefsimple", CEF_TARGET,
+                                "cefsimple.app/Contents/Frameworks"),
+                   os.path.join(build_path, "Frameworks"))
     else:
         fatal("Unknown architecture " + OSTYPE + ": I dunno how to extract CEF artifacts")
 
@@ -387,7 +396,16 @@ def compile_gdnative_cef(path):
     if OSTYPE == "Linux":
         gdnative_scons_cmd("x11")
     elif OSTYPE == "Darwin":
+        # For MacOSX we do not use the secondary process but the ones compiled
+        # from cefsimple example
+        if path == GDCEF_PROCESSES_PATH:
+            return
         gdnative_scons_cmd("osx")
+        # Move the libgdcef.dylib into the Framework folder
+        CEFLIB = os.path.join(CEF_ARTIFACTS_BUILD_PATH, "libgdcef.dylib")
+        if os.path.isfile(CEFLIB):
+            copyfile(CEFLIB, os.path.join(CEF_ARTIFACTS_BUILD_PATH, "Frameworks"))
+            os.remove(CEFLIB)
     elif OSTYPE == "Windows": # or OSTYPE == "MinGW":
         gdnative_scons_cmd("windows")
     else:
